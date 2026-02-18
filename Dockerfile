@@ -30,4 +30,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
 
 # Default command
-CMD ["python", "-m", "perfsonar_mcp"]
+CMD ["fastmcp", "run", "src/perfsonar_mcp/fastmcp_server.py", "--transport", "sse", "--host", "0.0.0.0", "--port", "8000"]
