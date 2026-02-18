@@ -3,7 +3,7 @@ Type definitions for perfSONAR MCP server
 """
 
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 # Configuration types
@@ -16,28 +16,28 @@ class PerfSONARConfig(BaseModel):
 # Measurement Archive types
 class EventSummary(BaseModel):
     """Summary information for an event type"""
+    model_config = ConfigDict(populate_by_name=True)
+    
     uri: str
     summary_type: str = Field(alias="summary-type")
     summary_window: int = Field(alias="summary-window")
     time_updated: Optional[int] = Field(default=None, alias="time-updated")
 
-    class Config:
-        populate_by_name = True
-
 
 class EventType(BaseModel):
     """Event type information"""
+    model_config = ConfigDict(populate_by_name=True)
+    
     event_type: str = Field(alias="event-type")
     base_uri: str = Field(alias="base-uri")
     summaries: Optional[List[EventSummary]] = None
     time_updated: Optional[int] = Field(default=None, alias="time-updated")
 
-    class Config:
-        populate_by_name = True
-
 
 class MeasurementMetadata(BaseModel):
     """Metadata about a measurement"""
+    model_config = ConfigDict(populate_by_name=True)
+    
     url: str
     metadata_key: str = Field(alias="metadata-key")
     source: str
@@ -51,9 +51,6 @@ class MeasurementMetadata(BaseModel):
     time_duration: Optional[int] = Field(default=None, alias="time-duration")
     ip_transport_protocol: Optional[str] = Field(default=None, alias="ip-transport-protocol")
 
-    class Config:
-        populate_by_name = True
-
 
 class TimeSeriesDataPoint(BaseModel):
     """A single time series data point"""
@@ -63,6 +60,8 @@ class TimeSeriesDataPoint(BaseModel):
 
 class MeasurementQueryParams(BaseModel):
     """Parameters for querying measurements"""
+    model_config = ConfigDict(populate_by_name=True)
+    
     source: Optional[str] = None
     destination: Optional[str] = None
     event_type: Optional[str] = Field(default=None, alias="event-type")
@@ -72,9 +71,6 @@ class MeasurementQueryParams(BaseModel):
     time_end: Optional[int] = Field(default=None, alias="time-end")
     time_range: Optional[int] = Field(default=None, alias="time-range")
     limit: Optional[int] = None
-
-    class Config:
-        populate_by_name = True
 
 
 class MeasurementDataParams(BaseModel):
@@ -97,6 +93,8 @@ class MeasurementResult(BaseModel):
 # Lookup Service types
 class LookupServiceRecord(BaseModel):
     """A record from the lookup service"""
+    model_config = ConfigDict(populate_by_name=True)
+    
     uri: Optional[str] = None
     type: Optional[List[str]] = None
     host_name: Optional[str] = Field(default=None, alias="host-name")
@@ -109,9 +107,6 @@ class LookupServiceRecord(BaseModel):
     access_point: Optional[str] = Field(default=None, alias="access-point")
     administrators: Optional[List[str]] = None
     communities: Optional[List[str]] = None
-
-    class Config:
-        populate_by_name = True
 
 
 class LookupQueryParams(BaseModel):
@@ -146,6 +141,8 @@ class PSchedulerTaskResponse(BaseModel):
 
 class PSchedulerRunStatus(BaseModel):
     """Status of a pScheduler run"""
+    model_config = ConfigDict(populate_by_name=True)
+    
     run: str  # Run URL
     task: str  # Task URL
     state: str  # pending, running, finished, failed, etc.
@@ -153,9 +150,6 @@ class PSchedulerRunStatus(BaseModel):
     start_time: Optional[str] = Field(default=None, alias="start-time")
     end_time: Optional[str] = Field(default=None, alias="end-time")
     result: Optional[Dict[str, Any]] = None
-
-    class Config:
-        populate_by_name = True
 
 
 class PSchedulerResult(BaseModel):
@@ -176,13 +170,12 @@ class ThroughputTestSpec(BaseModel):
 
 class LatencyTestSpec(BaseModel):
     """Specification for a latency test"""
+    model_config = ConfigDict(populate_by_name=True)
+    
     source: Optional[str] = None
     dest: str
     packet_count: Optional[int] = Field(default=600, alias="packet-count")
     packet_interval: Optional[float] = Field(default=0.1, alias="packet-interval")
-
-    class Config:
-        populate_by_name = True
 
 
 class RTTTestSpec(BaseModel):
