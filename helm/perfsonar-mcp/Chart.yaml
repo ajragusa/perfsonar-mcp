@@ -1,0 +1,16 @@
+apiVersion: v2
+name: perfsonar-mcp
+description: A Helm chart for perfSONAR MCP Server
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - perfsonar
+  - mcp
+  - network-monitoring
+  - model-context-protocol
+home: https://github.com/ajragusa/perfsonar-mcp
+sources:
+  - https://github.com/ajragusa/perfsonar-mcp
+maintainers:
+  - name: perfSONAR MCP Contributors

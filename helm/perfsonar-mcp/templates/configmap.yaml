@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "perfsonar-mcp.fullname" . }}-config
+  labels:
+    {{- include "perfsonar-mcp.labels" . | nindent 4 }}
+data:
+  perfsonarHost: {{ .Values.config.perfsonarHost | quote }}
+  lookupServiceUrl: {{ .Values.config.lookupServiceUrl | quote }}
+  pschedulerUrl: {{ .Values.config.pschedulerUrl | default (printf "https://%s/pscheduler" .Values.config.perfsonarHost) | quote }}

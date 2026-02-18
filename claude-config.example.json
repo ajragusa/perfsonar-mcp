@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "perfsonar": {
+      "command": "python",
+      "args": ["-m", "perfsonar_mcp"],
+      "env": {
+        "PERFSONAR_HOST": "perfsonar-archive.example.com"
+      }
+    }
+  }
+}
