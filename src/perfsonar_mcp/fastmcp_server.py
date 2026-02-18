@@ -379,7 +379,7 @@ async def get_test_result(runUrl: str) -> str:
 
 # Resources
 
-@mcp.resource(f"perfsonar://archive")
+@mcp.resource("perfsonar://archive")
 async def get_archive() -> str:
     """Get overview of the perfSONAR measurement archive"""
     measurements = await perfsonar_client.query_measurements()

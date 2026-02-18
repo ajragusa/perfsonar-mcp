@@ -2,6 +2,45 @@
 
 This document provides example queries you can use with the perfSONAR MCP server.
 
+## Setup
+
+### Local Setup (stdio)
+
+For local AI client integration:
+
+```bash
+export PERFSONAR_HOST=perfsonar.example.com
+python -m perfsonar_mcp
+```
+
+### Web Server Setup (SSE/HTTP)
+
+For web-accessible deployment:
+
+```bash
+export PERFSONAR_HOST=perfsonar.example.com
+fastmcp run src/perfsonar_mcp/fastmcp_server.py --transport sse --host 0.0.0.0 --port 8000
+```
+
+The server will be accessible at `http://localhost:8000/sse`
+
+You can test the endpoint with curl:
+```bash
+curl http://localhost:8000/sse
+```
+
+Or connect from any MCP client that supports SSE transport:
+```json
+{
+  "mcpServers": {
+    "perfsonar-web": {
+      "url": "http://localhost:8000/sse",
+      "transport": "sse"
+    }
+  }
+}
+```
+
 ## Basic Examples
 
 ### 1. Query All Measurements

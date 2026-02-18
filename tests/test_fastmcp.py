@@ -50,6 +50,12 @@ async def test_fastmcp_tools_registered():
     
     for tool in expected_tools:
         assert tool in tool_names, f"Tool {tool} not found in registered tools"
+    
+    # Verify tools have proper metadata
+    for tool_name in expected_tools:
+        tool = tools_dict[tool_name]
+        assert hasattr(tool, 'fn'), f"Tool {tool_name} missing function"
+        assert callable(tool.fn), f"Tool {tool_name} function not callable"
 
 
 @pytest.mark.asyncio
@@ -63,6 +69,12 @@ async def test_fastmcp_resources_registered():
     
     # Check that archive resource is registered
     assert any("perfsonar://archive" in uri for uri in resource_uris)
+    
+    # Verify resource has proper metadata
+    for uri, resource in resources_dict.items():
+        if "perfsonar://archive" in uri:
+            assert hasattr(resource, 'fn'), f"Resource {uri} missing function"
+            assert callable(resource.fn), f"Resource {uri} function not callable"
 
 
 def test_fastmcp_main():
