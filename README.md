@@ -42,7 +42,11 @@ npm run dev
 
 ### Using with Claude Desktop
 
-Add the following to your Claude Desktop configuration (`claude_desktop_config.json`):
+The configuration file location depends on your operating system:
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Add the following to your Claude Desktop configuration file:
 
 ```json
 {
@@ -57,6 +61,8 @@ Add the following to your Claude Desktop configuration (`claude_desktop_config.j
   }
 }
 ```
+
+See `claude-config.example.json` for a complete example.
 
 ### Using with Other MCP Clients
 
