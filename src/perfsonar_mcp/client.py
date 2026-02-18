@@ -3,6 +3,7 @@ Client for interacting with perfSONAR esmond measurement archive API
 """
 
 import httpx
+import logging
 from typing import List, Optional, Dict, Any
 from .types import (
     PerfSONARConfig,
@@ -13,12 +14,15 @@ from .types import (
     MeasurementResult,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class PerfSONARClient:
     """Client for perfSONAR esmond API"""
 
     def __init__(self, config: PerfSONARConfig):
         self.base_url = config.base_url or f"http://{config.host}/esmond/perfsonar/archive"
+        logger.info(f"Initializing PerfSONARClient with base URL: {self.base_url}")
         self.client = httpx.AsyncClient(
             base_url=self.base_url,
             timeout=30.0,
@@ -27,6 +31,7 @@ class PerfSONARClient:
 
     async def close(self):
         """Close the HTTP client"""
+        logger.debug("Closing PerfSONARClient HTTP connection")
         await self.client.aclose()
 
     async def query_measurements(
@@ -41,6 +46,8 @@ class PerfSONARClient:
         Returns:
             List of measurement metadata
         """
+        logger.info("Querying measurements")
+        logger.debug(f"Query parameters: {params}")
         try:
             query_params = {}
             if params:
@@ -50,12 +57,15 @@ class PerfSONARClient:
             response.raise_for_status()
             
             data = response.json()
+            logger.info(f"Retrieved {len(data)} measurement records")
             return [MeasurementMetadata.model_validate(item) for item in data]
         except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error querying measurements: {e.response.status_code}")
             raise Exception(
                 f"Failed to query measurements: {e.response.status_code} - {e.response.text}"
             )
         except Exception as e:
+            logger.error(f"Error querying measurements: {str(e)}")
             raise Exception(f"Failed to query measurements: {str(e)}")
 
     async def get_measurement_data(
@@ -70,6 +80,8 @@ class PerfSONARClient:
         Returns:
             List of time series data points
         """
+        logger.info(f"Getting measurement data for event type: {params.event_type}")
+        logger.debug(f"Measurement data parameters: {params}")
         try:
             # Build the URL path
             path = f"/{params.metadata_key}/{params.event_type}"
@@ -78,6 +90,8 @@ class PerfSONARClient:
                 path += f"/{params.summary_type}/{params.summary_window}"
             else:
                 path += "/base"
+            
+            logger.debug(f"Request path: {path}")
             
             # Build query params
             query_params: Dict[str, Any] = {}
@@ -92,12 +106,15 @@ class PerfSONARClient:
             response.raise_for_status()
             
             data = response.json()
+            logger.info(f"Retrieved {len(data)} data points")
             return [TimeSeriesDataPoint.model_validate(item) for item in data]
         except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error getting measurement data: {e.response.status_code}")
             raise Exception(
                 f"Failed to get measurement data: {e.response.status_code} - {e.response.text}"
             )
         except Exception as e:
+            logger.error(f"Error getting measurement data: {str(e)}")
             raise Exception(f"Failed to get measurement data: {str(e)}")
 
     async def get_throughput(
@@ -119,6 +136,7 @@ class PerfSONARClient:
         Returns:
             List of measurement results
         """
+        logger.info(f"Getting throughput: {source} -> {destination}")
         metadata = await self.query_measurements(
             MeasurementQueryParams(
                 source=source, destination=destination, event_type="throughput"
@@ -145,6 +163,7 @@ class PerfSONARClient:
             
             results.append(MeasurementResult(metadata=meta, data=data))
         
+        logger.info(f"Retrieved {len(results)} throughput results")
         return results
 
     async def get_latency(
@@ -166,6 +185,7 @@ class PerfSONARClient:
         Returns:
             List of measurement results
         """
+        logger.info(f"Getting latency: {source} -> {destination}")
         # Try histogram-owdelay first, fall back to histogram-rtt
         metadata = await self.query_measurements(
             MeasurementQueryParams(
@@ -174,6 +194,7 @@ class PerfSONARClient:
         )
         
         if not metadata:
+            logger.debug("No histogram-owdelay data, trying histogram-rtt")
             metadata = await self.query_measurements(
                 MeasurementQueryParams(
                     source=source, destination=destination, event_type="histogram-rtt"
@@ -203,6 +224,7 @@ class PerfSONARClient:
                 results.append(MeasurementResult(metadata=meta, data=data))
                 break
         
+        logger.info(f"Retrieved {len(results)} latency results")
         return results
 
     async def get_packet_loss(
@@ -224,6 +246,7 @@ class PerfSONARClient:
         Returns:
             List of measurement results
         """
+        logger.info(f"Getting packet loss: {source} -> {destination}")
         metadata = await self.query_measurements(
             MeasurementQueryParams(
                 source=source, destination=destination, event_type="packet-loss-rate"
@@ -250,6 +273,7 @@ class PerfSONARClient:
             
             results.append(MeasurementResult(metadata=meta, data=data))
         
+        logger.info(f"Retrieved {len(results)} packet loss results")
         return results
 
     async def get_available_event_types(
@@ -265,6 +289,7 @@ class PerfSONARClient:
         Returns:
             List of event type names
         """
+        logger.info("Getting available event types")
         metadata = await self.query_measurements(
             MeasurementQueryParams(source=source, destination=destination)
         )
@@ -274,4 +299,6 @@ class PerfSONARClient:
             for event_type in meta.event_types:
                 event_types.add(event_type.event_type)
         
-        return sorted(list(event_types))
+        result = sorted(list(event_types))
+        logger.info(f"Found {len(result)} event types")
+        return result

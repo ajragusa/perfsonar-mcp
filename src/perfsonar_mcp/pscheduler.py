@@ -3,6 +3,7 @@ Client for perfSONAR pScheduler API
 """
 
 import httpx
+import logging
 from typing import Optional, Dict, Any, List
 from .types import (
     PSchedulerTaskRequest,
@@ -14,6 +15,8 @@ from .types import (
     LatencyTestSpec,
     RTTTestSpec,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PSchedulerClient:
@@ -27,6 +30,7 @@ class PSchedulerClient:
             base_url: Base URL for pScheduler API (e.g., https://host/pscheduler)
         """
         self.base_url = base_url.rstrip("/")
+        logger.info(f"Initializing PSchedulerClient with base URL: {self.base_url}")
         self.client = httpx.AsyncClient(
             timeout=60.0,
             headers={"Accept": "application/json", "Content-Type": "application/json"},
@@ -34,6 +38,7 @@ class PSchedulerClient:
 
     async def close(self):
         """Close the HTTP client"""
+        logger.debug("Closing PSchedulerClient HTTP connection")
         await self.client.aclose()
 
     async def create_task(
@@ -48,6 +53,8 @@ class PSchedulerClient:
         Returns:
             Task response with task URL
         """
+        logger.info(f"Creating pScheduler task of type: {task_request.test.type}")
+        logger.debug(f"Task request: {task_request}")
         try:
             response = await self.client.post(
                 f"{self.base_url}/tasks",
@@ -56,12 +63,16 @@ class PSchedulerClient:
             response.raise_for_status()
             
             data = response.json()
-            return PSchedulerTaskResponse.model_validate(data)
+            result = PSchedulerTaskResponse.model_validate(data)
+            logger.info(f"Task created successfully: {result.task_url}")
+            return result
         except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error creating task: {e.response.status_code}")
             raise Exception(
                 f"Failed to create task: {e.response.status_code} - {e.response.text}"
             )
         except Exception as e:
+            logger.error(f"Error creating task: {str(e)}")
             raise Exception(f"Failed to create task: {str(e)}")
 
     async def schedule_throughput_test(
@@ -81,6 +92,7 @@ class PSchedulerClient:
         Returns:
             Task response
         """
+        logger.info(f"Scheduling throughput test to {dest} with duration {duration}")
         test_spec = ThroughputTestSpec(source=source, dest=dest, duration=duration)
         
         task_request = PSchedulerTaskRequest(
@@ -110,6 +122,7 @@ class PSchedulerClient:
         Returns:
             Task response
         """
+        logger.info(f"Scheduling latency test to {dest} ({packet_count} packets)")
         test_spec = LatencyTestSpec(
             source=source, dest=dest, packet_count=packet_count, packet_interval=packet_interval
         )
@@ -135,6 +148,7 @@ class PSchedulerClient:
         Returns:
             Task response
         """
+        logger.info(f"Scheduling RTT test to {dest} ({count} pings)")
         test_spec = RTTTestSpec(dest=dest, count=count)
         
         task_request = PSchedulerTaskRequest(
@@ -155,6 +169,7 @@ class PSchedulerClient:
         Returns:
             Task information
         """
+        logger.debug(f"Getting task info: {task_url}")
         try:
             # If it's a relative URL, prepend base_url
             if not task_url.startswith("http"):
@@ -165,10 +180,12 @@ class PSchedulerClient:
             
             return response.json()
         except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error getting task info: {e.response.status_code}")
             raise Exception(
                 f"Failed to get task info: {e.response.status_code} - {e.response.text}"
             )
         except Exception as e:
+            logger.error(f"Error getting task info: {str(e)}")
             raise Exception(f"Failed to get task info: {str(e)}")
 
     async def get_runs(self, task_url: str) -> List[str]:
@@ -194,6 +211,7 @@ class PSchedulerClient:
         Returns:
             Run status information
         """
+        logger.debug(f"Getting run status: {run_url}")
         try:
             # If it's a relative URL, prepend base_url
             if not run_url.startswith("http"):
@@ -203,12 +221,16 @@ class PSchedulerClient:
             response.raise_for_status()
             
             data = response.json()
-            return PSchedulerRunStatus.model_validate(data)
+            status = PSchedulerRunStatus.model_validate(data)
+            logger.info(f"Run status: {status.state}")
+            return status
         except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error getting run status: {e.response.status_code}")
             raise Exception(
                 f"Failed to get run status: {e.response.status_code} - {e.response.text}"
             )
         except Exception as e:
+            logger.error(f"Error getting run status: {str(e)}")
             raise Exception(f"Failed to get run status: {str(e)}")
 
     async def get_result(self, run_url: str) -> Optional[PSchedulerResult]:
@@ -221,14 +243,18 @@ class PSchedulerClient:
         Returns:
             Test result or None if not available yet
         """
+        logger.debug(f"Getting result for run: {run_url}")
         status = await self.get_run_status(run_url)
         
         if status.state not in ["finished", "failed"]:
+            logger.info(f"Run not completed yet, state: {status.state}")
             return None
         
         if status.result:
+            logger.info("Test result available")
             return PSchedulerResult.model_validate(status.result)
         
+        logger.info("No result available")
         return None
 
     async def cancel_task(self, task_url: str) -> bool:
@@ -241,6 +267,7 @@ class PSchedulerClient:
         Returns:
             True if successfully cancelled
         """
+        logger.info(f"Cancelling task: {task_url}")
         try:
             if not task_url.startswith("http"):
                 task_url = f"{self.base_url}{task_url}"
@@ -248,8 +275,10 @@ class PSchedulerClient:
             response = await self.client.delete(task_url)
             response.raise_for_status()
             
+            logger.info("Task cancelled successfully")
             return True
         except Exception as e:
+            logger.error(f"Error cancelling task: {str(e)}")
             raise Exception(f"Failed to cancel task: {str(e)}")
 
     async def wait_for_result(
@@ -266,15 +295,18 @@ class PSchedulerClient:
         Returns:
             Test result
         """
+        logger.info(f"Waiting for test result, max_wait={max_wait}s, poll_interval={poll_interval}s")
         import asyncio
         
         waited = 0
         while waited < max_wait:
             result = await self.get_result(run_url)
             if result:
+                logger.info(f"Test completed after {waited}s")
                 return result
             
             await asyncio.sleep(poll_interval)
             waited += poll_interval
         
+        logger.error(f"Test did not complete within {max_wait}s")
         raise TimeoutError(f"Test did not complete within {max_wait} seconds")
