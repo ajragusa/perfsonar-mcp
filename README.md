@@ -50,13 +50,35 @@ export PSCHEDULER_URL=https://perfsonar.example.com/pscheduler
 
 ## 🏃 Usage
 
-### Local
+### Local (stdio transport)
+
+Standard MCP stdio transport for local AI clients:
 
 ```bash
 python -m perfsonar_mcp
 # or
 perfsonar-mcp
 ```
+
+### Web Access (SSE/HTTP transport)
+
+FastMCP enables web-accessible MCP server via SSE (Server-Sent Events) or HTTP:
+
+```bash
+# SSE transport (recommended for web)
+export PERFSONAR_HOST=perfsonar.example.com
+fastmcp run src/perfsonar_mcp/fastmcp_server.py --transport sse --host 0.0.0.0 --port 8000
+
+# HTTP transport (alternative)
+fastmcp run src/perfsonar_mcp/fastmcp_server.py --transport http --host 0.0.0.0 --port 8000
+
+# Or use the convenience command
+perfsonar-mcp-web
+```
+
+The server will be accessible at:
+- SSE: `http://your-host:8000/sse`
+- HTTP: `http://your-host:8000/mcp/`
 
 ### Docker
 
@@ -87,6 +109,19 @@ Add to your `claude_desktop_config.json`:
       "env": {
         "PERFSONAR_HOST": "your-perfsonar-host.example.com"
       }
+    }
+  }
+}
+```
+
+For web-based access, use the SSE endpoint:
+
+```json
+{
+  "mcpServers": {
+    "perfsonar-web": {
+      "url": "http://your-server:8000/sse",
+      "transport": "sse"
     }
   }
 }
@@ -125,6 +160,7 @@ Ask Claude:
 
 ## 🏗️ Architecture
 
+### Standard MCP (stdio)
 ```
 AI Agent (Claude)
     ↓ MCP Protocol (stdio)
@@ -135,6 +171,26 @@ perfSONAR MCP Server (Python)
         ↓
     perfSONAR Services
 ```
+
+### Web-Accessible MCP (SSE/HTTP)
+```
+Web Clients / AI Agents
+    ↓ HTTP/SSE
+FastMCP Web Server (uvicorn)
+    ↓ MCP Protocol
+perfSONAR MCP Server (Python)
+    ├── Measurement Archive Client
+    ├── Lookup Service Client  
+    └── pScheduler Client
+        ↓
+    perfSONAR Services
+```
+
+Both transports expose the same tools and capabilities. The web transport enables:
+- Remote access from any HTTP client
+- Multiple concurrent connections
+- Integration with web-based AI applications
+- RESTful API-like access patterns
 
 ## 🛠️ Development
 

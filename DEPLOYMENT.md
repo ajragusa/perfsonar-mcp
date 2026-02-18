@@ -2,7 +2,9 @@
 
 ## Quick Start
 
-### Local Development
+### Local Development (stdio)
+
+For local AI client integration:
 
 ```bash
 # Install dependencies
@@ -13,6 +15,60 @@ export PERFSONAR_HOST=perfsonar.example.com
 
 # Run the server
 python -m perfsonar_mcp
+```
+
+### Local Web Server (SSE/HTTP)
+
+For web-accessible MCP server:
+
+```bash
+# Install dependencies
+pip install -e '.[dev]'
+
+# Set configuration
+export PERFSONAR_HOST=perfsonar.example.com
+
+# Run with SSE transport (recommended)
+fastmcp run src/perfsonar_mcp/fastmcp_server.py --transport sse --host 0.0.0.0 --port 8000
+
+# Or use the convenience command
+perfsonar-mcp-web
+
+# Access at:
+# - SSE endpoint: http://localhost:8000/sse
+# - Health check: http://localhost:8000/health (if configured)
+```
+
+### Production Web Deployment
+
+For production web deployment, use a process manager like systemd:
+
+```bash
+# /etc/systemd/system/perfsonar-mcp-web.service
+[Unit]
+Description=perfSONAR MCP Web Server
+After=network.target
+
+[Service]
+Type=simple
+User=perfsonar
+WorkingDirectory=/opt/perfsonar-mcp
+Environment="PERFSONAR_HOST=perfsonar.example.com"
+Environment="LOOKUP_SERVICE_URL=https://lookup.perfsonar.net/lookup"
+ExecStart=/usr/local/bin/fastmcp run /opt/perfsonar-mcp/src/perfsonar_mcp/fastmcp_server.py --transport sse --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable perfsonar-mcp-web
+sudo systemctl start perfsonar-mcp-web
+sudo systemctl status perfsonar-mcp-web
 ```
 
 ### Docker
@@ -141,6 +197,63 @@ ingress:
     - secretName: perfsonar-mcp-tls
       hosts:
         - perfsonar-mcp.example.com
+```
+
+### Reverse Proxy (nginx)
+
+For web deployment with SSL/TLS, use nginx as a reverse proxy:
+
+```nginx
+# /etc/nginx/sites-available/perfsonar-mcp
+server {
+    listen 443 ssl http2;
+    server_name perfsonar-mcp.example.com;
+
+    ssl_certificate /etc/ssl/certs/perfsonar-mcp.crt;
+    ssl_certificate_key /etc/ssl/private/perfsonar-mcp.key;
+
+    # Security headers
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Frame-Options DENY;
+    add_header X-XSS-Protection "1; mode=block";
+
+    # SSE endpoint
+    location /sse {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # SSE-specific settings
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 86400s;
+    }
+
+    # Optional: Health check endpoint
+    location /health {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+    }
+}
+
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    server_name perfsonar-mcp.example.com;
+    return 301 https://$server_name$request_uri;
+}
+```
+
+Enable the site:
+```bash
+sudo ln -s /etc/nginx/sites-available/perfsonar-mcp /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
 ### DevContainer (VS Code)
