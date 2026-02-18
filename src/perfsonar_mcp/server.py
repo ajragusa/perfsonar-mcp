@@ -4,6 +4,7 @@ MCP Server for perfSONAR
 
 import asyncio
 import json
+import logging
 import os
 from typing import Any, Optional
 from mcp.server import Server
@@ -26,11 +27,14 @@ from .types import (
     LookupQueryParams,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class PerfSONARMCPServer:
     """MCP Server for perfSONAR"""
 
     def __init__(self):
+        logger.info("Initializing PerfSONAR MCP Server")
         self.server = Server("perfsonar-mcp")
         self.perfsonar_host = os.getenv("PERFSONAR_HOST")
         self.lookup_service_url = os.getenv(
@@ -38,16 +42,22 @@ class PerfSONARMCPServer:
         )
         
         if not self.perfsonar_host:
+            logger.error("PERFSONAR_HOST environment variable not set")
             raise ValueError("PERFSONAR_HOST environment variable is required")
+        
+        logger.info(f"Configured perfSONAR host: {self.perfsonar_host}")
+        logger.info(f"Configured lookup service: {self.lookup_service_url}")
         
         self.client = PerfSONARClient(PerfSONARConfig(host=self.perfsonar_host))
         self.lookup_client = LookupServiceClient(self.lookup_service_url)
         self.pscheduler_url = os.getenv(
             "PSCHEDULER_URL", f"https://{self.perfsonar_host}/pscheduler"
         )
+        logger.info(f"Configured pScheduler URL: {self.pscheduler_url}")
         self.pscheduler_client = PSchedulerClient(self.pscheduler_url)
         
         self.setup_handlers()
+        logger.info("Server initialization complete")
 
     def setup_handlers(self):
         """Setup MCP request handlers"""
@@ -225,6 +235,8 @@ class PerfSONARMCPServer:
 
         @self.server.call_tool()
         async def call_tool(name: str, arguments: Any) -> CallToolResult:
+            logger.info(f"Tool called: {name}")
+            logger.debug(f"Tool arguments: {arguments}")
             try:
                 if name == "query_measurements":
                     params = MeasurementQueryParams(
@@ -405,9 +417,11 @@ class PerfSONARMCPServer:
                         )
 
                 else:
+                    logger.error(f"Unknown tool requested: {name}")
                     raise ValueError(f"Unknown tool: {name}")
 
             except Exception as e:
+                logger.error(f"Error executing tool {name}: {str(e)}", exc_info=True)
                 return CallToolResult(
                     content=[TextContent(type="text", text=f"Error: {str(e)}")], isError=True
                 )
@@ -425,6 +439,7 @@ class PerfSONARMCPServer:
 
         @self.server.read_resource()
         async def read_resource(uri: str) -> ReadResourceResult:
+            logger.info(f"Reading resource: {uri}")
             if uri == f"perfsonar://{self.perfsonar_host}/archive":
                 measurements = await self.client.query_measurements()
                 return ReadResourceResult(
@@ -435,10 +450,12 @@ class PerfSONARMCPServer:
                         )
                     ]
                 )
+            logger.error(f"Unknown resource requested: {uri}")
             raise ValueError(f"Unknown resource: {uri}")
 
     async def run(self):
         """Run the MCP server"""
+        logger.info("Starting MCP server on stdio")
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(
                 read_stream,
@@ -448,6 +465,8 @@ class PerfSONARMCPServer:
 
     async def cleanup(self):
         """Cleanup resources"""
+        logger.info("Cleaning up resources")
         await self.client.close()
         await self.lookup_client.close()
         await self.pscheduler_client.close()
+        logger.info("Cleanup complete")
