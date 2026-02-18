@@ -138,6 +138,30 @@ perfSONAR MCP Server (Python)
 
 ## 🛠️ Development
 
+### Logging
+
+The server includes comprehensive logging for development and debugging. By default, logs are written to stderr at INFO level.
+
+To enable DEBUG logging for more detailed output:
+
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
+
+Or set the log level via environment variable:
+
+```bash
+export PYTHONLOGLEVEL=DEBUG
+python -m perfsonar_mcp
+```
+
+Log output includes:
+- Server initialization and configuration
+- API requests and responses
+- Tool invocations with arguments
+- Error details with stack traces
+
 ### DevContainer
 
 Open in VS Code → Reopen in Container
