@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "perfsonar-mcp"
+version = "1.0.0"
+description = "MCP Server for perfSONAR - Query network measurements and discover testpoints"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+keywords = ["mcp", "perfsonar", "network-monitoring", "model-context-protocol"]
+authors = [
+    {name = "perfSONAR MCP Contributors"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "mcp>=1.0.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+perfsonar-mcp = "perfsonar_mcp.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/ajragusa/perfsonar-mcp"
+Repository = "https://github.com/ajragusa/perfsonar-mcp"
+
+[tool.setuptools]
+packages = ["perfsonar_mcp"]
+package-dir = {"" = "src"}
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
