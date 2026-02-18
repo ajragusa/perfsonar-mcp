@@ -3,7 +3,6 @@ Tests for FastMCP wrapper
 """
 
 import pytest
-import os
 
 
 def test_fastmcp_import():

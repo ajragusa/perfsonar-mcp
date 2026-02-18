@@ -10,7 +10,6 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastmcp import FastMCP
-from fastmcp.utilities.types import Image
 
 from perfsonar_mcp.client import PerfSONARClient
 from perfsonar_mcp.lookup import LookupServiceClient
@@ -45,7 +44,7 @@ async def lifespan(app):
         "PSCHEDULER_URL", f"https://{perfsonar_host}/pscheduler"
     )
     
-    logger.info(f"Initializing perfSONAR MCP Server")
+    logger.info("Initializing perfSONAR MCP Server")
     logger.info(f"perfSONAR host: {perfsonar_host}")
     logger.info(f"Lookup service: {lookup_service_url}")
     logger.info(f"pScheduler URL: {pscheduler_url}")
