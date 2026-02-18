@@ -1,0 +1,33 @@
+# Development Dockerfile
+FROM python:3.11
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    vim \
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create vscode user with sudo access
+RUN useradd -m -s /bin/bash vscode && \
+    echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Set working directory
+WORKDIR /workspaces/perfsonar-mcp
+
+# Install Python development tools
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir \
+    black \
+    ruff \
+    mypy \
+    pytest \
+    pytest-asyncio \
+    ipython
+
+# Switch to vscode user
+USER vscode
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1

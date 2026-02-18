@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  perfsonar-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: perfsonar-mcp:latest
+    container_name: perfsonar-mcp-server
+    environment:
+      - PERFSONAR_HOST=${PERFSONAR_HOST:-perfsonar.example.com}
+      - LOOKUP_SERVICE_URL=${LOOKUP_SERVICE_URL:-https://lookup.perfsonar.net/lookup}
+      - PSCHEDULER_URL=${PSCHEDULER_URL}
+    restart: unless-stopped
+    # For stdio transport, no ports needed
+    # ports:
+    #   - "8000:8000"
+    stdin_open: true
+    tty: true

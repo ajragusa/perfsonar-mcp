@@ -6,6 +6,19 @@ build/
 dist/
 *.tsbuildinfo
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+.eggs/
+*.egg
+
 # Logs
 logs
 *.log
@@ -28,7 +41,18 @@ Thumbs.db
 
 # Test coverage
 coverage/
+.coverage
+htmlcov/
+.pytest_cache/
 
 # Temporary files
 tmp/
 temp/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/

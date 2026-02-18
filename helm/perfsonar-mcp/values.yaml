@@ -1,0 +1,77 @@
+# Default values for perfsonar-mcp
+replicaCount: 1
+
+image:
+  repository: perfsonar-mcp
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8000
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# perfSONAR Configuration
+config:
+  perfsonarHost: "perfsonar.example.com"
+  lookupServiceUrl: "https://lookup.perfsonar.net/lookup"
+  pschedulerUrl: ""  # Defaults to https://{perfsonarHost}/pscheduler
+
+# Environment variables from secrets
+env:
+  - name: PERFSONAR_HOST
+    valueFrom:
+      configMapKeyRef:
+        name: perfsonar-mcp-config
+        key: perfsonarHost
+  - name: LOOKUP_SERVICE_URL
+    valueFrom:
+      configMapKeyRef:
+        name: perfsonar-mcp-config
+        key: lookupServiceUrl
+  - name: PSCHEDULER_URL
+    valueFrom:
+      configMapKeyRef:
+        name: perfsonar-mcp-config
+        key: pschedulerUrl
