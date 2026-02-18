@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "perfsonar": {
-      "command": "node",
-      "args": ["/absolute/path/to/perfsonar-mcp/build/index.js"],
+      "command": "python",
+      "args": ["-m", "perfsonar_mcp"],
       "env": {
         "PERFSONAR_HOST": "perfsonar-archive.example.com"
       }

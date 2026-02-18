@@ -23,16 +23,14 @@ MCP (Model Context Protocol) server for perfSONAR - Query measurements, discover
 
 ## 📦 Installation
 
-### Python (Recommended)
-
 ```bash
 pip install -e .
 ```
 
-### TypeScript
+For development with additional tools:
 
 ```bash
-npm install && npm run build
+pip install -e '.[dev]'
 ```
 
 ## ⚙️ Configuration
@@ -52,18 +50,12 @@ export PSCHEDULER_URL=https://perfsonar.example.com/pscheduler
 
 ## 🏃 Usage
 
-### Python
+### Local
 
 ```bash
 python -m perfsonar_mcp
 # or
 perfsonar-mcp
-```
-
-### TypeScript
-
-```bash
-npm start
 ```
 
 ### Docker
@@ -82,6 +74,9 @@ helm install perfsonar-mcp ./helm/perfsonar-mcp \
 ## 🤖 Claude Desktop Integration
 
 Add to your `claude_desktop_config.json`:
+
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`  
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -132,11 +127,13 @@ Ask Claude:
 
 ```
 AI Agent (Claude)
-    ↓ MCP Protocol
-perfSONAR MCP Server
+    ↓ MCP Protocol (stdio)
+perfSONAR MCP Server (Python)
     ├── Measurement Archive Client
     ├── Lookup Service Client  
     └── pScheduler Client
+        ↓
+    perfSONAR Services
 ```
 
 ## 🛠️ Development
@@ -145,21 +142,28 @@ perfSONAR MCP Server
 
 Open in VS Code → Reopen in Container
 
-### Local
+### Local Development
 
 ```bash
-# Python
+# Install with dev dependencies
 pip install -e '.[dev]'
+
+# Format code
 black src/perfsonar_mcp/
+
+# Lint code
 ruff check src/perfsonar_mcp/
 
-# TypeScript
-npm run dev
+# Type check
+mypy src/perfsonar_mcp/
+
+# Run tests
+pytest tests/
 ```
 
 ## 📚 Documentation
 
-- [TypeScript README](README-typescript.md)
+- [Deployment Guide](DEPLOYMENT.md)
 - [Examples](EXAMPLES.md)
 - [Contributing](CONTRIBUTING.md)
 

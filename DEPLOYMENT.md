@@ -5,15 +5,14 @@
 ### Local Development
 
 ```bash
-# Python
+# Install dependencies
 pip install -e '.[dev]'
-export PERFSONAR_HOST=perfsonar.example.com
-python -m perfsonar_mcp
 
-# TypeScript
-npm install && npm run dev
+# Set configuration
 export PERFSONAR_HOST=perfsonar.example.com
-npm start
+
+# Run the server
+python -m perfsonar_mcp
 ```
 
 ### Docker
@@ -157,11 +156,7 @@ ingress:
 
 3. **Start development:**
 ```bash
-# Python
 python -m perfsonar_mcp
-
-# TypeScript
-npm run dev
 ```
 
 ## Environment Variables
