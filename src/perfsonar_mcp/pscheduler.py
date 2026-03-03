@@ -296,18 +296,68 @@ class PSchedulerClient:
             Test result or None if not available yet
         """
         logger.debug(f"Getting result for run: {run_url}")
+
+        # If a task URL was provided, resolve it to the most recent run
+        if "/tasks/" in run_url and "/runs/" not in run_url:
+            task_url = run_url
+            if not task_url.startswith("http"):
+                task_url = f"{self.base_url}{task_url}"
+            runs_url = f"{task_url}/runs"
+            logger.info(f"Fetching runs list from: {runs_url}")
+            response = await self.client.get(runs_url)
+            if response.status_code == 404:
+                logger.info("No runs found for task yet")
+                return None
+            response.raise_for_status()
+            runs = response.json()
+            if isinstance(runs, dict) and "runs" in runs:
+                runs = runs.get("runs", [])
+            if not runs:
+                logger.info("No runs returned for task")
+                return None
+            # Use the most recent run
+            run_url = runs[-1]
+            logger.info(f"Using run URL: {run_url}")
+
         status = await self.get_run_status(run_url)
+        logger.info(f"Run status response: {status.model_dump()}")
 
         if status.state not in ["finished", "failed"]:
-            logger.info(f"Run not completed yet, state: {status.state}")
-            return None
+            if status.result:
+                logger.info("Run state not reported as finished, but result is present")
+            else:
+                logger.info(f"Run not completed yet, state: {status.state}")
+                return None
 
         if status.result:
-            logger.info("Test result available")
+            logger.info("Test result available in status")
             return PSchedulerResult.model_validate(status.result)
 
-        logger.info("No result available")
-        return None
+        # Fallback: try the /result endpoint directly
+        result_url = run_url
+        if not result_url.startswith("http"):
+            result_url = f"{self.base_url}{result_url}"
+        if not result_url.endswith("/result"):
+            result_url = f"{result_url}/result"
+
+        logger.info(f"Fetching result from: {result_url}")
+        try:
+            response = await self.client.get(result_url)
+            if response.status_code == 404 or response.status_code == 202:
+                logger.info("Result not available yet")
+                return None
+            response.raise_for_status()
+            data = response.json()
+            logger.info("Test result available from /result endpoint")
+            return PSchedulerResult.model_validate(data)
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error getting result: {e.response.status_code}")
+            raise Exception(
+                f"Failed to get test result: {e.response.status_code} - {e.response.text}"
+            )
+        except Exception as e:
+            logger.error(f"Error getting result: {str(e)}")
+            raise Exception(f"Failed to get test result: {str(e)}")
 
     async def cancel_task(self, task_url: str) -> bool:
         """
