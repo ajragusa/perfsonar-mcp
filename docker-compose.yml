@@ -8,7 +8,7 @@ services:
     image: perfsonar-mcp:latest
     container_name: perfsonar-mcp-server
     environment:
-      - PERFSONAR_HOST=${PERFSONAR_HOST:-chi-pt1.es.net}
+      - PERFSONAR_HOST=${PERFSONAR_HOST:-uct2-net1.mwt2.org}
       - LOOKUP_SERVICE_URL=${LOOKUP_SERVICE_URL:-http://35.223.142.206:8090/lookup}
       - PSCHEDULER_URL=${PSCHEDULER_URL}
     restart: unless-stopped

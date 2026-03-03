@@ -164,9 +164,9 @@ class PSchedulerRunStatus(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    run: str  # Run URL
-    task: str  # Task URL
-    state: str  # pending, running, finished, failed, etc.
+    run: Optional[str] = None  # Run URL
+    task: Optional[str] = None  # Task URL
+    state: Optional[str] = None  # pending, running, finished, failed, etc.
     state_display: Optional[str] = Field(default=None, alias="state-display")
     start_time: Optional[str] = Field(default=None, alias="start-time")
     end_time: Optional[str] = Field(default=None, alias="end-time")

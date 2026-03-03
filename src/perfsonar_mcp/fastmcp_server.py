@@ -285,6 +285,7 @@ async def schedule_throughput_test(
     dest: str,
     source: Optional[str] = None,
     duration: str = "PT30S",
+    slip: str = "PT10M",
 ) -> str:
     """Schedule a throughput test using pScheduler.
 
@@ -292,11 +293,12 @@ async def schedule_throughput_test(
         dest: Destination host for the test
         source: Optional source host (if not specified, uses pScheduler host)
         duration: Test duration in ISO 8601 format (e.g., 'PT30S' for 30 seconds)
+        slip: Schedule slip time in ISO 8601 format (e.g., 'PT10M' for 10 minutes)
 
     Returns:
         JSON string with test details including run URL for status checks
     """
-    result = await pscheduler_client.schedule_throughput_test(source, dest, duration)
+    result = await pscheduler_client.schedule_throughput_test(source, dest, duration, slip)
     return json.dumps(result.model_dump(), indent=2)
 
 
@@ -306,6 +308,7 @@ async def schedule_latency_test(
     source: Optional[str] = None,
     packetCount: int = 600,
     packetInterval: float = 0.1,
+    slip: str = "PT10M",
 ) -> str:
     """Schedule a latency test using pScheduler.
 
@@ -314,12 +317,13 @@ async def schedule_latency_test(
         source: Optional source host (if not specified, uses pScheduler host)
         packetCount: Number of packets to send (default: 600)
         packetInterval: Interval between packets in seconds (default: 0.1)
+        slip: Schedule slip time in ISO 8601 format (e.g., 'PT10M' for 10 minutes)
 
     Returns:
         JSON string with test details including run URL for status checks
     """
     result = await pscheduler_client.schedule_latency_test(
-        source, dest, packetCount, packetInterval
+        source, dest, packetCount, packetInterval, slip
     )
     return json.dumps(result.model_dump(), indent=2)
 
@@ -328,17 +332,19 @@ async def schedule_latency_test(
 async def schedule_rtt_test(
     dest: str,
     count: int = 10,
+    slip: str = "PT10M",
 ) -> str:
     """Schedule an RTT (ping) test using pScheduler.
 
     Args:
         dest: Destination host for the test
         count: Number of pings (default: 10)
+        slip: Schedule slip time in ISO 8601 format (e.g., 'PT10M' for 10 minutes)
 
     Returns:
         JSON string with test details including run URL for status checks
     """
-    result = await pscheduler_client.schedule_rtt_test(dest, count)
+    result = await pscheduler_client.schedule_rtt_test(dest, count, slip)
     return json.dumps(result.model_dump(), indent=2)
 
 

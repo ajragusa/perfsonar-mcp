@@ -2,16 +2,18 @@
 Client for interacting with perfSONAR esmond measurement archive API
 """
 
-import httpx
 import logging
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
+import httpx
+
 from .types import (
-    PerfSONARConfig,
+    MeasurementDataParams,
     MeasurementMetadata,
     MeasurementQueryParams,
-    TimeSeriesDataPoint,
-    MeasurementDataParams,
     MeasurementResult,
+    PerfSONARConfig,
+    TimeSeriesDataPoint,
 )
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,7 @@ class PerfSONARClient:
             base_url=self.base_url,
             timeout=30.0,
             headers={"Accept": "application/json"},
+            verify=False,
         )
 
     async def close(self):
@@ -39,10 +42,10 @@ class PerfSONARClient:
     ) -> List[MeasurementMetadata]:
         """
         Query measurements with optional filters
-        
+
         Args:
             params: Query parameters for filtering measurements
-            
+
         Returns:
             List of measurement metadata
         """
@@ -52,10 +55,10 @@ class PerfSONARClient:
             query_params = {}
             if params:
                 query_params = params.model_dump(by_alias=True, exclude_none=True)
-            
+
             response = await self.client.get("/", params=query_params)
             response.raise_for_status()
-            
+
             data = response.json()
             logger.info(f"Retrieved {len(data)} measurement records")
             return [MeasurementMetadata.model_validate(item) for item in data]
@@ -73,10 +76,10 @@ class PerfSONARClient:
     ) -> List[TimeSeriesDataPoint]:
         """
         Get measurement data for a specific event type
-        
+
         Args:
             params: Parameters specifying which measurement data to retrieve
-            
+
         Returns:
             List of time series data points
         """
@@ -85,14 +88,14 @@ class PerfSONARClient:
         try:
             # Build the URL path
             path = f"/{params.metadata_key}/{params.event_type}"
-            
+
             if params.summary_type and params.summary_window:
                 path += f"/{params.summary_type}/{params.summary_window}"
             else:
                 path += "/base"
-            
+
             logger.debug(f"Request path: {path}")
-            
+
             # Build query params
             query_params: Dict[str, Any] = {}
             if params.time_start:
@@ -101,10 +104,10 @@ class PerfSONARClient:
                 query_params["time-end"] = params.time_end
             if params.time_range:
                 query_params["time-range"] = params.time_range
-            
+
             response = await self.client.get(path, params=query_params)
             response.raise_for_status()
-            
+
             data = response.json()
             logger.info(f"Retrieved {len(data)} data points")
             return [TimeSeriesDataPoint.model_validate(item) for item in data]
@@ -126,31 +129,27 @@ class PerfSONARClient:
     ) -> List[MeasurementResult]:
         """
         Get throughput measurements between source and destination
-        
+
         Args:
             source: Source host/IP address
             destination: Destination host/IP address
             time_range: Time range in seconds from now
             summary_window: Summary window in seconds
-            
+
         Returns:
             List of measurement results
         """
         logger.info(f"Getting throughput: {source} -> {destination}")
         metadata = await self.query_measurements(
-            MeasurementQueryParams(
-                source=source, destination=destination, event_type="throughput"
-            )
+            MeasurementQueryParams(source=source, destination=destination, event_type="throughput")
         )
-        
+
         results = []
         for meta in metadata:
-            event_type = next(
-                (e for e in meta.event_types if e.event_type == "throughput"), None
-            )
+            event_type = next((e for e in meta.event_types if e.event_type == "throughput"), None)
             if not event_type:
                 continue
-            
+
             data = await self.get_measurement_data(
                 MeasurementDataParams(
                     metadata_key=meta.metadata_key,
@@ -160,9 +159,9 @@ class PerfSONARClient:
                     time_range=time_range,
                 )
             )
-            
+
             results.append(MeasurementResult(metadata=meta, data=data))
-        
+
         logger.info(f"Retrieved {len(results)} throughput results")
         return results
 
@@ -175,13 +174,13 @@ class PerfSONARClient:
     ) -> List[MeasurementResult]:
         """
         Get latency/delay measurements between source and destination
-        
+
         Args:
             source: Source host/IP address
             destination: Destination host/IP address
             time_range: Time range in seconds from now
             summary_window: Summary window in seconds
-            
+
         Returns:
             List of measurement results
         """
@@ -192,7 +191,7 @@ class PerfSONARClient:
                 source=source, destination=destination, event_type="histogram-owdelay"
             )
         )
-        
+
         if not metadata:
             logger.debug("No histogram-owdelay data, trying histogram-rtt")
             metadata = await self.query_measurements(
@@ -200,7 +199,7 @@ class PerfSONARClient:
                     source=source, destination=destination, event_type="histogram-rtt"
                 )
             )
-        
+
         results = []
         for meta in metadata:
             event_types = ["histogram-owdelay", "histogram-rtt"]
@@ -210,7 +209,7 @@ class PerfSONARClient:
                 )
                 if not event_type:
                     continue
-                
+
                 data = await self.get_measurement_data(
                     MeasurementDataParams(
                         metadata_key=meta.metadata_key,
@@ -220,10 +219,10 @@ class PerfSONARClient:
                         time_range=time_range,
                     )
                 )
-                
+
                 results.append(MeasurementResult(metadata=meta, data=data))
                 break
-        
+
         logger.info(f"Retrieved {len(results)} latency results")
         return results
 
@@ -236,13 +235,13 @@ class PerfSONARClient:
     ) -> List[MeasurementResult]:
         """
         Get packet loss measurements between source and destination
-        
+
         Args:
             source: Source host/IP address
             destination: Destination host/IP address
             time_range: Time range in seconds from now
             summary_window: Summary window in seconds
-            
+
         Returns:
             List of measurement results
         """
@@ -252,7 +251,7 @@ class PerfSONARClient:
                 source=source, destination=destination, event_type="packet-loss-rate"
             )
         )
-        
+
         results = []
         for meta in metadata:
             event_type = next(
@@ -260,7 +259,7 @@ class PerfSONARClient:
             )
             if not event_type:
                 continue
-            
+
             data = await self.get_measurement_data(
                 MeasurementDataParams(
                     metadata_key=meta.metadata_key,
@@ -270,9 +269,9 @@ class PerfSONARClient:
                     time_range=time_range,
                 )
             )
-            
+
             results.append(MeasurementResult(metadata=meta, data=data))
-        
+
         logger.info(f"Retrieved {len(results)} packet loss results")
         return results
 
@@ -281,11 +280,11 @@ class PerfSONARClient:
     ) -> List[str]:
         """
         Get all available event types for measurements
-        
+
         Args:
             source: Optional source filter
             destination: Optional destination filter
-            
+
         Returns:
             List of event type names
         """
@@ -293,12 +292,12 @@ class PerfSONARClient:
         metadata = await self.query_measurements(
             MeasurementQueryParams(source=source, destination=destination)
         )
-        
+
         event_types = set()
         for meta in metadata:
             for event_type in meta.event_types:
                 event_types.add(event_type.event_type)
-        
+
         result = sorted(list(event_types))
         logger.info(f"Found {len(result)} event types")
         return result

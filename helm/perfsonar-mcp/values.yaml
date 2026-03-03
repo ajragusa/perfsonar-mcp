@@ -23,7 +23,7 @@ podSecurityContext:
 securityContext:
   capabilities:
     drop:
-    - ALL
+      - ALL
   readOnlyRootFilesystem: true
   runAsNonRoot: true
   runAsUser: 1000
@@ -54,9 +54,9 @@ affinity: {}
 
 # perfSONAR Configuration
 config:
-  perfsonarHost: "perfsonar.example.com"
-  lookupServiceUrl: "https://lookup.perfsonar.net/lookup"
-  pschedulerUrl: ""  # Defaults to https://{perfsonarHost}/pscheduler
+  perfsonarHost: "uct2-net1.mwt2.org"
+  lookupServiceUrl: "http://35.223.142.206:8090/lookup"
+  pschedulerUrl: "" # Defaults to https://{perfsonarHost}/pscheduler
 
 # Environment variables from secrets
 env:

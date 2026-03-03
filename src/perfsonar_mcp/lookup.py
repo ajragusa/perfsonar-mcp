@@ -22,6 +22,7 @@ class LookupServiceClient:
         self.client = httpx.AsyncClient(
             timeout=30.0,
             headers={"Accept": "application/json"},
+            verify=False,
         )
 
     async def close(self):

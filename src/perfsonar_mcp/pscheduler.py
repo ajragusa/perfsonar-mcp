@@ -42,6 +42,7 @@ class PSchedulerClient:
         self.client = httpx.AsyncClient(
             timeout=60.0,
             headers={"Accept": "application/json", "Content-Type": "application/json"},
+            verify=False,
         )
 
     async def close(self):
@@ -72,8 +73,10 @@ class PSchedulerClient:
             response.raise_for_status()
 
             data = response.json()
+            if isinstance(data, str):
+                data = {"task": data}
             result = PSchedulerTaskResponse.model_validate(data)
-            logger.info(f"Task created successfully: {result.task_url}")
+            logger.info(f"Task created successfully: {result.task}")
             return result
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error creating task: {e.response.status_code}")
@@ -87,6 +90,7 @@ class PSchedulerClient:
         source: Optional[str],
         dest: str,
         duration: str = "PT30S",
+        slip: str = "PT10M",
     ) -> PSchedulerTaskResponse:
         """
         Schedule a throughput test
@@ -95,18 +99,35 @@ class PSchedulerClient:
             source: Source host (None for local)
             dest: Destination host
             duration: Test duration in ISO 8601 format (e.g., PT30S for 30 seconds)
+            slip: Schedule slip time in ISO 8601 format (e.g., PT10M for 10 minutes)
 
         Returns:
             Task response
         """
-        logger.info(f"Scheduling throughput test to {dest} with duration {duration}")
+        logger.info(
+            f"Scheduling throughput test from {source or 'local'} to {dest} with duration {duration}"
+        )
+
+        # Determine which node to schedule on (prefer source if available)
+        scheduler_node = source or dest
+        scheduler_url = f"https://{scheduler_node}/pscheduler"
+        logger.info(f"Using pScheduler at: {scheduler_url}")
+
         test_spec = ThroughputTestSpec(source=source, dest=dest, duration=duration)
 
         task_request = PSchedulerTaskRequest(
-            test=PSchedulerTestSpec(type="throughput", spec=test_spec.model_dump(exclude_none=True))
+            test=PSchedulerTestSpec(
+                type="throughput", spec=test_spec.model_dump(exclude_none=True)
+            ),
+            schedule={"slip": slip},
         )
 
-        return await self.create_task(task_request)
+        # Create a temporary client for this specific scheduler
+        client = PSchedulerClient(scheduler_url)
+        try:
+            return await client.create_task(task_request)
+        finally:
+            await client.close()
 
     async def schedule_latency_test(
         self,
@@ -114,6 +135,7 @@ class PSchedulerClient:
         dest: str,
         packet_count: int = 600,
         packet_interval: float = 0.1,
+        slip: str = "PT10M",
     ) -> PSchedulerTaskResponse:
         """
         Schedule a latency (one-way delay) test
@@ -123,11 +145,20 @@ class PSchedulerClient:
             dest: Destination host
             packet_count: Number of packets to send
             packet_interval: Interval between packets in seconds
+            slip: Schedule slip time in ISO 8601 format (e.g., PT10M for 10 minutes)
 
         Returns:
             Task response
         """
-        logger.info(f"Scheduling latency test to {dest} ({packet_count} packets)")
+        logger.info(
+            f"Scheduling latency test from {source or 'local'} to {dest} ({packet_count} packets)"
+        )
+
+        # Determine which node to schedule on (prefer source if available)
+        scheduler_node = source or dest
+        scheduler_url = f"https://{scheduler_node}/pscheduler"
+        logger.info(f"Using pScheduler at: {scheduler_url}")
+
         test_spec = LatencyTestSpec(
             source=source, dest=dest, packet_count=packet_count, packet_interval=packet_interval
         )
@@ -135,30 +166,50 @@ class PSchedulerClient:
         task_request = PSchedulerTaskRequest(
             test=PSchedulerTestSpec(
                 type="latency", spec=test_spec.model_dump(by_alias=True, exclude_none=True)
-            )
+            ),
+            schedule={"slip": slip},
         )
 
-        return await self.create_task(task_request)
+        # Create a temporary client for this specific scheduler
+        client = PSchedulerClient(scheduler_url)
+        try:
+            return await client.create_task(task_request)
+        finally:
+            await client.close()
 
-    async def schedule_rtt_test(self, dest: str, count: int = 10) -> PSchedulerTaskResponse:
+    async def schedule_rtt_test(
+        self, dest: str, count: int = 10, slip: str = "PT10M"
+    ) -> PSchedulerTaskResponse:
         """
         Schedule an RTT (round-trip time) test
 
         Args:
             dest: Destination host
             count: Number of pings
+            slip: Schedule slip time in ISO 8601 format (e.g., PT10M for 10 minutes)
 
         Returns:
             Task response
         """
         logger.info(f"Scheduling RTT test to {dest} ({count} pings)")
+
+        # For RTT tests, schedule on the destination since it measures from local to dest
+        scheduler_url = f"https://{dest}/pscheduler"
+        logger.info(f"Using pScheduler at: {scheduler_url}")
+
         test_spec = RTTTestSpec(dest=dest, count=count)
 
         task_request = PSchedulerTaskRequest(
-            test=PSchedulerTestSpec(type="rtt", spec=test_spec.model_dump(exclude_none=True))
+            test=PSchedulerTestSpec(type="rtt", spec=test_spec.model_dump(exclude_none=True)),
+            schedule={"slip": slip},
         )
 
-        return await self.create_task(task_request)
+        # Create a temporary client for this specific scheduler
+        client = PSchedulerClient(scheduler_url)
+        try:
+            return await client.create_task(task_request)
+        finally:
+            await client.close()
 
     async def get_task_info(self, task_url: str) -> Dict[str, Any]:
         """
