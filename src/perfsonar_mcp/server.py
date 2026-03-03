@@ -7,24 +7,25 @@ import json
 import logging
 import os
 from typing import Any, Optional
+
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import (
-    Tool,
-    TextContent,
     CallToolResult,
-    Resource,
     ReadResourceResult,
+    Resource,
+    TextContent,
+    Tool,
 )
 
 from .client import PerfSONARClient
 from .lookup import LookupServiceClient
 from .pscheduler import PSchedulerClient
 from .types import (
-    PerfSONARConfig,
-    MeasurementQueryParams,
-    MeasurementDataParams,
     LookupQueryParams,
+    MeasurementDataParams,
+    MeasurementQueryParams,
+    PerfSONARConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,16 +39,16 @@ class PerfSONARMCPServer:
         self.server = Server("perfsonar-mcp")
         self.perfsonar_host = os.getenv("PERFSONAR_HOST")
         self.lookup_service_url = os.getenv(
-            "LOOKUP_SERVICE_URL", "https://lookup.perfsonar.net/lookup"
+            "LOOKUP_SERVICE_URL", "http://35.223.142.206:8090/lookup"
         )
-        
+
         if not self.perfsonar_host:
             logger.error("PERFSONAR_HOST environment variable not set")
             raise ValueError("PERFSONAR_HOST environment variable is required")
-        
+
         logger.info(f"Configured perfSONAR host: {self.perfsonar_host}")
         logger.info(f"Configured lookup service: {self.lookup_service_url}")
-        
+
         self.client = PerfSONARClient(PerfSONARConfig(host=self.perfsonar_host))
         self.lookup_client = LookupServiceClient(self.lookup_service_url)
         self.pscheduler_url = os.getenv(
@@ -55,13 +56,13 @@ class PerfSONARMCPServer:
         )
         logger.info(f"Configured pScheduler URL: {self.pscheduler_url}")
         self.pscheduler_client = PSchedulerClient(self.pscheduler_url)
-        
+
         self.setup_handlers()
         logger.info("Server initialization complete")
 
     def setup_handlers(self):
         """Setup MCP request handlers"""
-        
+
         @self.server.list_tools()
         async def list_tools() -> list[Tool]:
             return [
@@ -72,7 +73,10 @@ class PerfSONARMCPServer:
                         "type": "object",
                         "properties": {
                             "source": {"type": "string", "description": "Source host/IP address"},
-                            "destination": {"type": "string", "description": "Destination host/IP address"},
+                            "destination": {
+                                "type": "string",
+                                "description": "Destination host/IP address",
+                            },
                             "eventType": {"type": "string", "description": "Event type to filter"},
                             "toolName": {"type": "string", "description": "Tool name to filter"},
                             "timeRange": {"type": "number", "description": "Time range in seconds"},
@@ -85,10 +89,16 @@ class PerfSONARMCPServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "metadataKey": {"type": "string", "description": "Metadata key from query"},
+                            "metadataKey": {
+                                "type": "string",
+                                "description": "Metadata key from query",
+                            },
                             "eventType": {"type": "string", "description": "Event type"},
                             "summaryType": {"type": "string", "description": "Summary type"},
-                            "summaryWindow": {"type": "number", "description": "Summary window in seconds"},
+                            "summaryWindow": {
+                                "type": "number",
+                                "description": "Summary window in seconds",
+                            },
                             "timeRange": {"type": "number", "description": "Time range in seconds"},
                         },
                         "required": ["metadataKey", "eventType"],
@@ -101,9 +111,15 @@ class PerfSONARMCPServer:
                         "type": "object",
                         "properties": {
                             "source": {"type": "string", "description": "Source host/IP address"},
-                            "destination": {"type": "string", "description": "Destination host/IP address"},
+                            "destination": {
+                                "type": "string",
+                                "description": "Destination host/IP address",
+                            },
                             "timeRange": {"type": "number", "description": "Time range in seconds"},
-                            "summaryWindow": {"type": "number", "description": "Summary window in seconds"},
+                            "summaryWindow": {
+                                "type": "number",
+                                "description": "Summary window in seconds",
+                            },
                         },
                         "required": ["source", "destination"],
                     },
@@ -115,9 +131,15 @@ class PerfSONARMCPServer:
                         "type": "object",
                         "properties": {
                             "source": {"type": "string", "description": "Source host/IP address"},
-                            "destination": {"type": "string", "description": "Destination host/IP address"},
+                            "destination": {
+                                "type": "string",
+                                "description": "Destination host/IP address",
+                            },
                             "timeRange": {"type": "number", "description": "Time range in seconds"},
-                            "summaryWindow": {"type": "number", "description": "Summary window in seconds"},
+                            "summaryWindow": {
+                                "type": "number",
+                                "description": "Summary window in seconds",
+                            },
                         },
                         "required": ["source", "destination"],
                     },
@@ -129,9 +151,15 @@ class PerfSONARMCPServer:
                         "type": "object",
                         "properties": {
                             "source": {"type": "string", "description": "Source host/IP address"},
-                            "destination": {"type": "string", "description": "Destination host/IP address"},
+                            "destination": {
+                                "type": "string",
+                                "description": "Destination host/IP address",
+                            },
                             "timeRange": {"type": "number", "description": "Time range in seconds"},
-                            "summaryWindow": {"type": "number", "description": "Summary window in seconds"},
+                            "summaryWindow": {
+                                "type": "number",
+                                "description": "Summary window in seconds",
+                            },
                         },
                         "required": ["source", "destination"],
                     },
@@ -178,7 +206,10 @@ class PerfSONARMCPServer:
                         "properties": {
                             "source": {"type": "string", "description": "Source host (optional)"},
                             "dest": {"type": "string", "description": "Destination host"},
-                            "duration": {"type": "string", "description": "Test duration (e.g., PT30S)"},
+                            "duration": {
+                                "type": "string",
+                                "description": "Test duration (e.g., PT30S)",
+                            },
                         },
                         "required": ["dest"],
                     },
@@ -192,7 +223,10 @@ class PerfSONARMCPServer:
                             "source": {"type": "string", "description": "Source host (optional)"},
                             "dest": {"type": "string", "description": "Destination host"},
                             "packetCount": {"type": "number", "description": "Number of packets"},
-                            "packetInterval": {"type": "number", "description": "Interval between packets"},
+                            "packetInterval": {
+                                "type": "number",
+                                "description": "Interval between packets",
+                            },
                         },
                         "required": ["dest"],
                     },
@@ -215,7 +249,10 @@ class PerfSONARMCPServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "runUrl": {"type": "string", "description": "Run URL from test scheduling"},
+                            "runUrl": {
+                                "type": "string",
+                                "description": "Run URL from test scheduling",
+                            },
                         },
                         "required": ["runUrl"],
                     },
@@ -226,7 +263,10 @@ class PerfSONARMCPServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "runUrl": {"type": "string", "description": "Run URL from test scheduling"},
+                            "runUrl": {
+                                "type": "string",
+                                "description": "Run URL from test scheduling",
+                            },
                         },
                         "required": ["runUrl"],
                     },
@@ -251,7 +291,9 @@ class PerfSONARMCPServer:
                         content=[
                             TextContent(
                                 type="text",
-                                text=json.dumps([r.model_dump(by_alias=True) for r in results], indent=2),
+                                text=json.dumps(
+                                    [r.model_dump(by_alias=True) for r in results], indent=2
+                                ),
                             )
                         ]
                     )
@@ -285,7 +327,9 @@ class PerfSONARMCPServer:
                         content=[
                             TextContent(
                                 type="text",
-                                text=json.dumps([r.model_dump(by_alias=True) for r in results], indent=2),
+                                text=json.dumps(
+                                    [r.model_dump(by_alias=True) for r in results], indent=2
+                                ),
                             )
                         ]
                     )
@@ -301,7 +345,9 @@ class PerfSONARMCPServer:
                         content=[
                             TextContent(
                                 type="text",
-                                text=json.dumps([r.model_dump(by_alias=True) for r in results], indent=2),
+                                text=json.dumps(
+                                    [r.model_dump(by_alias=True) for r in results], indent=2
+                                ),
                             )
                         ]
                     )
@@ -317,7 +363,9 @@ class PerfSONARMCPServer:
                         content=[
                             TextContent(
                                 type="text",
-                                text=json.dumps([r.model_dump(by_alias=True) for r in results], indent=2),
+                                text=json.dumps(
+                                    [r.model_dump(by_alias=True) for r in results], indent=2
+                                ),
                             )
                         ]
                     )
@@ -340,7 +388,9 @@ class PerfSONARMCPServer:
                         content=[
                             TextContent(
                                 type="text",
-                                text=json.dumps([r.model_dump(by_alias=True) for r in results], indent=2),
+                                text=json.dumps(
+                                    [r.model_dump(by_alias=True) for r in results], indent=2
+                                ),
                             )
                         ]
                     )
@@ -353,7 +403,9 @@ class PerfSONARMCPServer:
                         content=[
                             TextContent(
                                 type="text",
-                                text=json.dumps([r.model_dump(by_alias=True) for r in results], indent=2),
+                                text=json.dumps(
+                                    [r.model_dump(by_alias=True) for r in results], indent=2
+                                ),
                             )
                         ]
                     )
@@ -398,7 +450,8 @@ class PerfSONARMCPServer:
                     return CallToolResult(
                         content=[
                             TextContent(
-                                type="text", text=json.dumps(result.model_dump(by_alias=True), indent=2)
+                                type="text",
+                                text=json.dumps(result.model_dump(by_alias=True), indent=2),
                             )
                         ]
                     )
@@ -408,7 +461,9 @@ class PerfSONARMCPServer:
                     if result:
                         return CallToolResult(
                             content=[
-                                TextContent(type="text", text=json.dumps(result.model_dump(), indent=2))
+                                TextContent(
+                                    type="text", text=json.dumps(result.model_dump(), indent=2)
+                                )
                             ]
                         )
                     else:
@@ -446,7 +501,9 @@ class PerfSONARMCPServer:
                     contents=[
                         TextContent(
                             type="text",
-                            text=json.dumps([m.model_dump(by_alias=True) for m in measurements], indent=2),
+                            text=json.dumps(
+                                [m.model_dump(by_alias=True) for m in measurements], indent=2
+                            ),
                         )
                     ]
                 )

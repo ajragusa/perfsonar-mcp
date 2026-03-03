@@ -6,6 +6,7 @@ Main entry point for perfSONAR MCP server
 import asyncio
 import logging
 import sys
+
 from perfsonar_mcp.server import PerfSONARMCPServer
 
 
@@ -13,12 +14,12 @@ def main():
     """Main entry point"""
     # Configure logging to stderr for MCP compatibility
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         stream=sys.stderr,
     )
     logger = logging.getLogger(__name__)
-    
+
     try:
         logger.info("Starting perfSONAR MCP server")
         server = PerfSONARMCPServer()

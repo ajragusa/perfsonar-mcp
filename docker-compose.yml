@@ -8,12 +8,16 @@ services:
     image: perfsonar-mcp:latest
     container_name: perfsonar-mcp-server
     environment:
-      - PERFSONAR_HOST=${PERFSONAR_HOST:-perfsonar.example.com}
-      - LOOKUP_SERVICE_URL=${LOOKUP_SERVICE_URL:-https://lookup.perfsonar.net/lookup}
+      - PERFSONAR_HOST=${PERFSONAR_HOST:-chi-pt1.es.net}
+      - LOOKUP_SERVICE_URL=${LOOKUP_SERVICE_URL:-http://35.223.142.206:8090/lookup}
       - PSCHEDULER_URL=${PSCHEDULER_URL}
     restart: unless-stopped
+    # Configure DNS servers for proper hostname resolution
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     # For stdio transport, no ports needed
-    # ports:
-    #   - "8000:8000"
+    ports:
+      - "8000:8000"
     stdin_open: true
     tty: true

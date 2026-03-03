@@ -6,18 +6,26 @@ Enables web access via SSE and HTTP transports
 import json
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastmcp import FastMCP
 
+# Configure logging before other imports
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stderr,
+)
+
 from perfsonar_mcp.client import PerfSONARClient
 from perfsonar_mcp.lookup import LookupServiceClient
 from perfsonar_mcp.pscheduler import PSchedulerClient
 from perfsonar_mcp.types import (
-    PerfSONARConfig,
-    MeasurementQueryParams,
     MeasurementDataParams,
+    MeasurementQueryParams,
+    PerfSONARConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,30 +40,28 @@ pscheduler_client: Optional[PSchedulerClient] = None
 async def lifespan(app):
     """Initialize and cleanup resources"""
     global perfsonar_client, lookup_client, pscheduler_client
-    
+
     perfsonar_host = os.getenv("PERFSONAR_HOST")
     if not perfsonar_host:
         raise ValueError("PERFSONAR_HOST environment variable is required")
-    
-    lookup_service_url = os.getenv(
-        "LOOKUP_SERVICE_URL", "https://lookup.perfsonar.net/lookup"
-    )
-    pscheduler_url = os.getenv(
-        "PSCHEDULER_URL", f"https://{perfsonar_host}/pscheduler"
-    )
-    
+
+    lookup_service_url = os.getenv("LOOKUP_SERVICE_URL", "http://35.223.142.206:8090/lookup")
+    pscheduler_url = os.getenv("PSCHEDULER_URL")
+    if not pscheduler_url:
+        pscheduler_url = f"https://{perfsonar_host}/pscheduler"
+
     logger.info("Initializing perfSONAR MCP Server")
     logger.info(f"perfSONAR host: {perfsonar_host}")
     logger.info(f"Lookup service: {lookup_service_url}")
     logger.info(f"pScheduler URL: {pscheduler_url}")
-    
+
     # Initialize clients
     perfsonar_client = PerfSONARClient(PerfSONARConfig(host=perfsonar_host))
     lookup_client = LookupServiceClient(lookup_service_url)
     pscheduler_client = PSchedulerClient(pscheduler_url)
-    
+
     yield
-    
+
     # Cleanup
     logger.info("Cleaning up resources")
     if perfsonar_client:
@@ -83,6 +89,7 @@ Available capabilities:
 
 # Measurement Archive Tools
 
+
 @mcp.tool()
 async def query_measurements(
     source: Optional[str] = None,
@@ -92,14 +99,14 @@ async def query_measurements(
     timeRange: Optional[int] = None,
 ) -> str:
     """Query perfSONAR measurements with optional filters. Returns metadata about available measurements.
-    
+
     Args:
         source: Source host/IP address
         destination: Destination host/IP address
         eventType: Event type to filter (e.g., 'throughput', 'histogram-owdelay')
         toolName: Tool name to filter (e.g., 'bwctl/iperf3', 'powstream')
         timeRange: Time range in seconds from now
-        
+
     Returns:
         JSON string with measurement metadata
     """
@@ -123,14 +130,14 @@ async def get_measurement_data(
     timeRange: Optional[int] = None,
 ) -> str:
     """Get raw time-series data for a specific measurement.
-    
+
     Args:
         metadataKey: Metadata key from query results
         eventType: Event type (e.g., 'throughput', 'histogram-owdelay')
         summaryType: Summary type (e.g., 'average', 'aggregation')
         summaryWindow: Summary window in seconds
         timeRange: Time range in seconds from now
-        
+
     Returns:
         JSON string with time-series measurement data
     """
@@ -153,19 +160,17 @@ async def get_throughput(
     summaryWindow: Optional[int] = None,
 ) -> str:
     """Get throughput measurements between source and destination.
-    
+
     Args:
         source: Source host/IP address
         destination: Destination host/IP address
         timeRange: Time range in seconds (default: 86400 = 24 hours)
         summaryWindow: Summary window in seconds for aggregation
-        
+
     Returns:
         JSON string with throughput measurement data
     """
-    results = await perfsonar_client.get_throughput(
-        source, destination, timeRange, summaryWindow
-    )
+    results = await perfsonar_client.get_throughput(source, destination, timeRange, summaryWindow)
     return json.dumps([r.model_dump(by_alias=True) for r in results], indent=2)
 
 
@@ -177,19 +182,17 @@ async def get_latency(
     summaryWindow: Optional[int] = None,
 ) -> str:
     """Get latency/delay measurements between source and destination.
-    
+
     Args:
         source: Source host/IP address
         destination: Destination host/IP address
         timeRange: Time range in seconds (default: 86400 = 24 hours)
         summaryWindow: Summary window in seconds for aggregation
-        
+
     Returns:
         JSON string with latency measurement data
     """
-    results = await perfsonar_client.get_latency(
-        source, destination, timeRange, summaryWindow
-    )
+    results = await perfsonar_client.get_latency(source, destination, timeRange, summaryWindow)
     return json.dumps([r.model_dump(by_alias=True) for r in results], indent=2)
 
 
@@ -201,19 +204,17 @@ async def get_packet_loss(
     summaryWindow: Optional[int] = None,
 ) -> str:
     """Get packet loss measurements between source and destination.
-    
+
     Args:
         source: Source host/IP address
         destination: Destination host/IP address
         timeRange: Time range in seconds (default: 86400 = 24 hours)
         summaryWindow: Summary window in seconds for aggregation
-        
+
     Returns:
         JSON string with packet loss measurement data
     """
-    results = await perfsonar_client.get_packet_loss(
-        source, destination, timeRange, summaryWindow
-    )
+    results = await perfsonar_client.get_packet_loss(source, destination, timeRange, summaryWindow)
     return json.dumps([r.model_dump(by_alias=True) for r in results], indent=2)
 
 
@@ -223,11 +224,11 @@ async def get_available_event_types(
     destination: Optional[str] = None,
 ) -> str:
     """Get all available event types in the measurement archive.
-    
+
     Args:
         source: Optional source filter
         destination: Optional destination filter
-        
+
     Returns:
         JSON string with list of available event types
     """
@@ -237,6 +238,7 @@ async def get_available_event_types(
 
 # Lookup Service Tools
 
+
 @mcp.tool()
 async def lookup_testpoints(
     serviceType: Optional[str] = None,
@@ -244,18 +246,16 @@ async def lookup_testpoints(
     locationCountry: Optional[str] = None,
 ) -> str:
     """Find perfSONAR testpoints using the lookup service.
-    
+
     Args:
         serviceType: Service type filter (e.g., 'bwctl', 'owamp')
         locationCity: City filter (e.g., 'Chicago', 'London')
         locationCountry: Country filter (e.g., 'US', 'GB')
-        
+
     Returns:
         JSON string with list of matching testpoints
     """
-    results = await lookup_client.find_testpoints(
-        serviceType, locationCity, locationCountry
-    )
+    results = await lookup_client.find_testpoints(serviceType, locationCity, locationCountry)
     return json.dumps([r.model_dump(by_alias=True) for r in results], indent=2)
 
 
@@ -265,21 +265,20 @@ async def find_pscheduler_services(
     locationCountry: Optional[str] = None,
 ) -> str:
     """Find pScheduler services for running tests.
-    
+
     Args:
         locationCity: City filter (e.g., 'Chicago', 'London')
         locationCountry: Country filter (e.g., 'US', 'GB')
-        
+
     Returns:
         JSON string with list of pScheduler services
     """
-    results = await lookup_client.find_pscheduler_services(
-        locationCity, locationCountry
-    )
+    results = await lookup_client.find_pscheduler_services(locationCity, locationCountry)
     return json.dumps([r.model_dump(by_alias=True) for r in results], indent=2)
 
 
 # pScheduler Tools
+
 
 @mcp.tool()
 async def schedule_throughput_test(
@@ -288,18 +287,16 @@ async def schedule_throughput_test(
     duration: str = "PT30S",
 ) -> str:
     """Schedule a throughput test using pScheduler.
-    
+
     Args:
         dest: Destination host for the test
         source: Optional source host (if not specified, uses pScheduler host)
         duration: Test duration in ISO 8601 format (e.g., 'PT30S' for 30 seconds)
-        
+
     Returns:
         JSON string with test details including run URL for status checks
     """
-    result = await pscheduler_client.schedule_throughput_test(
-        source, dest, duration
-    )
+    result = await pscheduler_client.schedule_throughput_test(source, dest, duration)
     return json.dumps(result.model_dump(), indent=2)
 
 
@@ -311,13 +308,13 @@ async def schedule_latency_test(
     packetInterval: float = 0.1,
 ) -> str:
     """Schedule a latency test using pScheduler.
-    
+
     Args:
         dest: Destination host for the test
         source: Optional source host (if not specified, uses pScheduler host)
         packetCount: Number of packets to send (default: 600)
         packetInterval: Interval between packets in seconds (default: 0.1)
-        
+
     Returns:
         JSON string with test details including run URL for status checks
     """
@@ -333,11 +330,11 @@ async def schedule_rtt_test(
     count: int = 10,
 ) -> str:
     """Schedule an RTT (ping) test using pScheduler.
-    
+
     Args:
         dest: Destination host for the test
         count: Number of pings (default: 10)
-        
+
     Returns:
         JSON string with test details including run URL for status checks
     """
@@ -348,10 +345,10 @@ async def schedule_rtt_test(
 @mcp.tool()
 async def get_test_status(runUrl: str) -> str:
     """Get status of a pScheduler test run.
-    
+
     Args:
         runUrl: Run URL from test scheduling response
-        
+
     Returns:
         JSON string with test status information
     """
@@ -362,10 +359,10 @@ async def get_test_status(runUrl: str) -> str:
 @mcp.tool()
 async def get_test_result(runUrl: str) -> str:
     """Get result of a completed pScheduler test.
-    
+
     Args:
         runUrl: Run URL from test scheduling response
-        
+
     Returns:
         JSON string with test results, or message if test not completed yet
     """
@@ -377,6 +374,7 @@ async def get_test_result(runUrl: str) -> str:
 
 
 # Resources
+
 
 @mcp.resource("perfsonar://archive")
 async def get_archive() -> str:

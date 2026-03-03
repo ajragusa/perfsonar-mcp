@@ -2,10 +2,13 @@
 Client for perfSONAR Lookup Service (sLS)
 """
 
-import httpx
+import json
 import logging
-from typing import List, Optional, Dict, Any
-from .types import LookupServiceRecord, LookupQueryParams
+from typing import Any, Dict, List, Optional
+
+import httpx
+
+from .types import LookupQueryParams, LookupServiceRecord
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +16,7 @@ logger = logging.getLogger(__name__)
 class LookupServiceClient:
     """Client for perfSONAR Simple Lookup Service (sLS)"""
 
-    def __init__(self, base_url: str = "https://lookup.perfsonar.net/lookup"):
+    def __init__(self, base_url: str = "http://35.223.142.206:8090/lookup"):
         self.base_url = base_url
         logger.info(f"Initializing LookupServiceClient with base URL: {self.base_url}")
         self.client = httpx.AsyncClient(
@@ -31,10 +34,10 @@ class LookupServiceClient:
     ) -> List[LookupServiceRecord]:
         """
         Search for records in the lookup service
-        
+
         Args:
             params: Query parameters for filtering records
-            
+
         Returns:
             List of lookup service records
         """
@@ -43,20 +46,37 @@ class LookupServiceClient:
         try:
             query_params = {}
             if params:
-                query_params = params.model_dump(exclude_none=True)
-            
-            response = await self.client.get(
-                f"{self.base_url}/records", params=query_params
-            )
+                query_params = params.model_dump(exclude_none=True, by_alias=True)
+
+            full_url = f"{self.base_url}/records/"
+            logger.info(f"Making request to: {full_url}")
+            logger.info(f"Query parameters: {query_params}")
+            logger.debug(f"Request headers: {self.client.headers}")
+
+            response = await self.client.get(full_url, params=query_params)
+            logger.debug(f"Response status: {response.status_code}")
+            logger.debug(f"Response headers: {dict(response.headers)}")
+            logger.debug(f"Response URL: {response.url}")
+
             response.raise_for_status()
-            
+
             data = response.json()
+            logger.debug(
+                f"Response body: {json.dumps(data) if isinstance(data, (dict, list)) else data}"
+            )
             logger.info(f"Found {len(data)} lookup service records")
             return [LookupServiceRecord.model_validate(item) for item in data]
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error searching lookup service: {e.response.status_code}")
             raise Exception(
                 f"Failed to search lookup service: {e.response.status_code} - {e.response.text}"
+            )
+        except httpx.ConnectError as e:
+            logger.error(
+                f"Connection error connecting to lookup service at {self.base_url}: {str(e)}"
+            )
+            raise Exception(
+                f"Failed to connect to lookup service at {self.base_url}. Please check that the service is accessible and DNS resolution is working. Error: {str(e)}"
             )
         except Exception as e:
             logger.error(f"Error searching lookup service: {str(e)}")
@@ -70,19 +90,18 @@ class LookupServiceClient:
     ) -> List[LookupServiceRecord]:
         """
         Find perfSONAR testpoints/measurement archives
-        
+
         Args:
             service_type: Filter by service type (e.g., 'ps:MeasurementArchive')
             location_city: Filter by city
             location_country: Filter by country
-            
+
         Returns:
             List of testpoint records
         """
         logger.info(f"Finding testpoints (city={location_city}, country={location_country})")
         params = LookupQueryParams(
-            type="service",
-            service_type=service_type or "ps:MeasurementArchive",
+            type="host",
             location_city=location_city,
             location_country=location_country,
         )
@@ -96,16 +115,18 @@ class LookupServiceClient:
     ) -> List[LookupServiceRecord]:
         """
         Find perfSONAR hosts
-        
+
         Args:
             host_name: Filter by hostname
             location_city: Filter by city
             location_country: Filter by country
-            
+
         Returns:
             List of host records
         """
-        logger.info(f"Finding hosts (name={host_name}, city={location_city}, country={location_country})")
+        logger.info(
+            f"Finding hosts (name={host_name}, city={location_city}, country={location_country})"
+        )
         params = LookupQueryParams(
             type="host",
             host_name=host_name,
@@ -121,15 +142,17 @@ class LookupServiceClient:
     ) -> List[LookupServiceRecord]:
         """
         Find pScheduler services for running tests
-        
+
         Args:
             location_city: Filter by city
             location_country: Filter by country
-            
+
         Returns:
             List of pScheduler service records
         """
-        logger.info(f"Finding pScheduler services (city={location_city}, country={location_country})")
+        logger.info(
+            f"Finding pScheduler services (city={location_city}, country={location_country})"
+        )
         params = LookupQueryParams(
             type="service",
             service_type="pscheduler",
@@ -141,10 +164,10 @@ class LookupServiceClient:
     async def get_host_details(self, host_name: str) -> Optional[LookupServiceRecord]:
         """
         Get detailed information about a specific host
-        
+
         Args:
             host_name: The hostname to look up
-            
+
         Returns:
             Host record or None if not found
         """
